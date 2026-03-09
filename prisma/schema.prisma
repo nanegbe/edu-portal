@@ -1,0 +1,237 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// --- NextAuth Models ---
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime?
+  image         String?
+  password      String? // For credentials login
+  role          Role      @default(STUDENT)
+  accounts      Account[]
+  sessions      Session[]
+
+  // Profile Relations
+  teacherProfile Teacher?
+  studentProfile Student?
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+enum Role {
+  PRINCIPAL
+  TEACHER
+  STUDENT
+  PARENT
+}
+
+// --- School Management Models ---
+
+model AcademicYear {
+  id          String       @id @default(cuid())
+  year        String       @unique // e.g., "2024/2025"
+  type        SystemType   @default(SEMESTER)
+  status      YearStatus   @default(UPCOMING)
+  terms       Term[]
+  enrollments Enrollment[]
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+}
+
+enum SystemType {
+  SEMESTER
+  TRIMESTER
+}
+
+enum YearStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+model Term {
+  id             String       @id @default(cuid())
+  name           String // e.g., "First Semester", "Term 3"
+  startDate      DateTime
+  endDate        DateTime
+  isActive       Boolean      @default(false)
+  academicYearId String
+  academicYear   AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  attendances    Attendance[]
+  scores         Score[]
+}
+
+model Teacher {
+  id      String  @id @default(cuid())
+  userId  String  @unique
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject String?
+  status  String  @default("active")
+
+  // Assignment: A teacher can manage multiple classes
+  classes ClassAssignment[]
+}
+
+model Class {
+  id    String  @id @default(cuid())
+  name  String  @unique // e.g., "Grade 10A"
+  level String? // Optional: e.g., "Secondary", "Primary"
+
+  // Relations
+  assignments ClassAssignment[]
+  enrollments Enrollment[]
+}
+
+// Junction table for Class-Teacher assignment (Supports many-to-many logically)
+model ClassAssignment {
+  id        String  @id @default(cuid())
+  classId   String
+  teacherId String
+  class     Class   @relation(fields: [classId], references: [id], onDelete: Cascade)
+  teacher   Teacher @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+
+  @@unique([classId, teacherId])
+}
+
+model Student {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Admission Data
+  studentId    String   @unique
+  dateOfBirth  DateTime
+  gender       String
+  placeOfBirth String
+  nationality  String
+  address      String
+  photoUrl     String?
+
+  // Academic Context
+  previousSchool     String?
+  lastClassCompleted String?
+  admissionDate      DateTime @default(now())
+
+  // Relations
+  medicalInfo      MedicalInfo?
+  emergencyContact EmergencyContact?
+  enrollments      Enrollment[]
+  guardians        Guardian[]
+}
+
+model Enrollment {
+  id             String @id @default(cuid())
+  studentId      String
+  classId        String
+  academicYearId String
+  status         String @default("enrolled") // e.g., "enrolled", "withdrawn"
+
+  student      Student      @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  class        Class        @relation(fields: [classId], references: [id], onDelete: Cascade)
+  academicYear AcademicYear @relation(fields: [academicYearId], references: [id], onDelete: Cascade)
+  attendances  Attendance[]
+  scores       Score[]
+
+  @@unique([studentId, academicYearId])
+}
+
+model Guardian {
+  id           String  @id @default(cuid())
+  name         String
+  relationship String
+  phone        String
+  email        String?
+  occupation   String?
+  address      String?
+
+  students Student[]
+}
+
+model MedicalInfo {
+  id                String  @id @default(cuid())
+  studentId         String  @unique
+  student           Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  allergies         String?
+  medicalConditions String?
+  bloodGroup        String?
+}
+
+model EmergencyContact {
+  id           String  @id @default(cuid())
+  studentId    String  @unique
+  student      Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  name         String
+  relationship String
+  phone        String
+}
+
+model Attendance {
+  id           String   @id @default(cuid())
+  date         DateTime
+  status       String // PRESENT, ABSENT, LATE, EXCUSED
+  enrollmentId String
+  termId       String
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  term       Term       @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, date])
+}
+
+model Score {
+  id           String  @id @default(cuid())
+  subject      String
+  marks        Float
+  grade        String?
+  enrollmentId String
+  termId       String
+
+  enrollment Enrollment @relation(fields: [enrollmentId], references: [id], onDelete: Cascade)
+  term       Term       @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([enrollmentId, termId, subject])
+}

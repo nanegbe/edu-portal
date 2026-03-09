@@ -1,42 +1,56 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ChevronRight, TrendingUp, Users, BookOpen, Award, Calendar } from 'lucide-react';
 
 export default function PrincipalDashboard() {
     const [selectedClass, setSelectedClass] = useState<any>(null);
     const [selectedStudent, setSelectedStudent] = useState<any>(null);
 
-    // Mock data
-    const schoolStats = {
-        totalStudents: 1247,
-        attendanceRate: 94.2,
-        participationRate: 87.5,
-        academicAverage: 82.3
+    const [schoolStats, setSchoolStats] = useState<any>({
+        totalStudents: 0,
+        attendanceRate: 0,
+        participationRate: 0,
+        academicAverage: 0
+    });
+    const [classes, setClasses] = useState<any[]>([]);
+    const [classStudents, setClassStudents] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const fetchStats = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/dashboard/stats');
+            const data = await res.json();
+            if (data.schoolStats) setSchoolStats(data.schoolStats);
+            if (data.classes) setClasses(data.classes);
+        } catch (error) {
+            console.error('Failed to fetch stats:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
-    const classes = [
-        { id: 1, name: 'Grade 10A', attendance: 96.5, participation: 91.2, academicAvg: 85.7, students: 32 },
-        { id: 2, name: 'Grade 10B', attendance: 94.8, participation: 88.5, academicAvg: 83.4, students: 30 },
-        { id: 3, name: 'Grade 9A', attendance: 93.2, participation: 86.7, academicAvg: 81.2, students: 28 },
-        { id: 4, name: 'Grade 9B', attendance: 91.5, participation: 84.3, academicAvg: 79.8, students: 29 },
-        { id: 5, name: 'Grade 11A', attendance: 95.8, participation: 90.1, academicAvg: 86.5, students: 31 },
-        { id: 6, name: 'Grade 11B', attendance: 92.3, participation: 85.8, academicAvg: 80.9, students: 27 },
-        { id: 7, name: 'Grade 12A', attendance: 97.2, participation: 93.5, academicAvg: 88.2, students: 25 },
-        { id: 8, name: 'Grade 12B', attendance: 94.1, participation: 89.3, academicAvg: 84.6, students: 26 },
-    ];
+    const handleClassClick = async (classItem: any) => {
+        try {
+            setLoading(true);
+            setSelectedClass(classItem);
+            setSelectedStudent(null);
 
-    const mockStudents = [
-        { id: 1, name: 'Emma Johnson', attendance: 98.5, participation: 95.0, academicAvg: 92.3 },
-        { id: 2, name: 'Liam Chen', attendance: 96.2, participation: 91.5, academicAvg: 89.7 },
-        { id: 3, name: 'Sophia Martinez', attendance: 94.8, participation: 88.3, academicAvg: 87.2 },
-        { id: 4, name: 'Noah Williams', attendance: 92.5, participation: 85.7, academicAvg: 84.5 },
-        { id: 5, name: 'Olivia Brown', attendance: 91.3, participation: 83.2, academicAvg: 82.8 },
-    ];
+            const res = await fetch(`/api/dashboard/stats?classId=${classItem.id}`);
+            const data = await res.json();
 
-    const handleClassClick = (classData: any) => {
-        setSelectedClass(classData);
-        setSelectedStudent(null);
+            if (data.classStats) setSelectedClass(data.classStats);
+            if (data.students) setClassStudents(data.students);
+        } catch (error) {
+            console.error('Failed to fetch class stats:', error);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleStudentClick = (student: any) => {
@@ -83,7 +97,15 @@ export default function PrincipalDashboard() {
             </header>
 
             {/* Content */}
-            <main className="p-6">
+            <main className={`p-6 transition-opacity duration-300 ${loading ? 'opacity-50 pointer-events-none' : 'opacity-100'}`}>
+                {loading && (
+                    <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+                        <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl shadow-xl flex items-center gap-3 border border-slate-200 animate-pulse">
+                            <div className="w-6 h-6 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                            <span className="font-bold text-slate-900">Updating Stats...</span>
+                        </div>
+                    </div>
+                )}
                 {selectedStudent ? (
                     // Individual Student View
                     <div className="max-w-4xl mx-auto space-y-6 animate-fadeIn">
@@ -218,7 +240,7 @@ export default function PrincipalDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {mockStudents.map((student, index) => (
+                                            {classStudents.map((student, index) => (
                                                 <tr
                                                     key={student.id}
                                                     onClick={() => handleStudentClick(student)}

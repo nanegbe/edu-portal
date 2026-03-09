@@ -1,63 +1,38 @@
 'use client';
 
-import { useState } from 'react';
-import { Plus, Edit, Trash2, UserCheck, UserX, Search, Filter, Users } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, UserCheck, UserX, Search, Filter, Users, Copy, Check } from 'lucide-react';
 
 export default function TeachersManagement() {
     const [showAddModal, setShowAddModal] = useState(false);
     const [showAssignModal, setShowAssignModal] = useState(false);
+    const [showCredentialsModal, setShowCredentialsModal] = useState(false);
+    const [credentials, setCredentials] = useState<any>(null);
     const [selectedTeacher, setSelectedTeacher] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [filterStatus, setFilterStatus] = useState('all');
+    const [loading, setLoading] = useState(true);
+    const [copied, setCopied] = useState(false);
 
-    // Mock data
-    const [teachers, setTeachers] = useState([
-        {
-            id: 1,
-            name: 'Sarah Johnson',
-            email: 'sarah.j@school.edu',
-            subject: 'Mathematics',
-            status: 'active',
-            classes: ['Grade 10A', 'Grade 11A'],
-            courses: ['Algebra II', 'Calculus']
-        },
-        {
-            id: 2,
-            name: 'Michael Chen',
-            email: 'michael.c@school.edu',
-            subject: 'Physics',
-            status: 'active',
-            classes: ['Grade 11B', 'Grade 12A'],
-            courses: ['Physics I', 'Advanced Physics']
-        },
-        {
-            id: 3,
-            name: 'Emily Rodriguez',
-            email: 'emily.r@school.edu',
-            subject: 'English',
-            status: 'active',
-            classes: ['Grade 9A', 'Grade 10B'],
-            courses: ['Literature', 'Creative Writing']
-        },
-        {
-            id: 4,
-            name: 'David Thompson',
-            email: 'david.t@school.edu',
-            subject: 'Chemistry',
-            status: 'inactive',
-            classes: ['Grade 12B'],
-            courses: ['Chemistry I']
-        },
-        {
-            id: 5,
-            name: 'Lisa Anderson',
-            email: 'lisa.a@school.edu',
-            subject: 'History',
-            status: 'active',
-            classes: ['Grade 9B', 'Grade 11A'],
-            courses: ['World History', 'US History']
-        },
-    ]);
+    // Dynamic data
+    const [teachers, setTeachers] = useState<any[]>([]);
+
+    useEffect(() => {
+        fetchTeachers();
+    }, []);
+
+    const fetchTeachers = async () => {
+        try {
+            setLoading(true);
+            const res = await fetch('/api/teachers');
+            const data = await res.json();
+            setTeachers(data);
+        } catch (error) {
+            console.error('Failed to fetch teachers:', error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const availableClasses = ['Grade 9A', 'Grade 9B', 'Grade 10A', 'Grade 10B', 'Grade 11A', 'Grade 11B', 'Grade 12A', 'Grade 12B'];
     const availableCourses = ['Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'History', 'Geography', 'Art', 'Music', 'PE'];
@@ -71,37 +46,92 @@ export default function TeachersManagement() {
         courses: []
     });
 
-    const handleAddTeacher = () => {
+    const handleAddTeacher = async () => {
         if (newTeacher.name && newTeacher.email && newTeacher.subject) {
-            const teacher = {
-                id: teachers.length + 1,
-                ...newTeacher
-            };
-            setTeachers([...teachers, teacher]);
-            setNewTeacher({ name: '', email: '', subject: '', status: 'active', classes: [], courses: [] });
-            setShowAddModal(false);
+            try {
+                const res = await fetch('/api/teachers', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTeacher)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    setCredentials(data.credentials);
+                    setShowAddModal(false);
+                    setShowCredentialsModal(true);
+                    fetchTeachers();
+                    setNewTeacher({ name: '', email: '', subject: '', status: 'active', classes: [], courses: [] });
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to create teacher');
+                }
+            } catch (error) {
+                alert('An error occurred while creating teacher');
+            }
         }
     };
 
-    const handleDeleteTeacher = (id: number) => {
+    const handleDeleteTeacher = async (id: string) => {
         if (confirm('Are you sure you want to delete this teacher?')) {
-            setTeachers(teachers.filter(t => t.id !== id));
+            try {
+                const res = await fetch(`/api/teachers?id=${id}`, {
+                    method: 'DELETE'
+                });
+                if (res.ok) {
+                    fetchTeachers();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to delete teacher');
+                }
+            } catch (error) {
+                alert('An error occurred while deleting teacher');
+            }
         }
     };
 
-    const handleToggleStatus = (id: number) => {
-        setTeachers(teachers.map(t =>
-            t.id === id ? { ...t, status: t.status === 'active' ? 'inactive' : 'active' } : t
-        ));
+    const handleToggleStatus = async (id: string, currentStatus: string) => {
+        const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+        try {
+            const res = await fetch(`/api/teachers?id=${id}`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ status: newStatus })
+            });
+            if (res.ok) {
+                fetchTeachers();
+            } else {
+                const err = await res.json();
+                alert(err.error || 'Failed to update status');
+            }
+        } catch (error) {
+            alert('An error occurred while updating status');
+        }
     };
 
-    const handleAssignTeacher = () => {
+    const handleAssignTeacher = async () => {
         if (selectedTeacher) {
-            setTeachers(teachers.map(t =>
-                t.id === selectedTeacher.id ? selectedTeacher : t
-            ));
-            setShowAssignModal(false);
-            setSelectedTeacher(null);
+            try {
+                const res = await fetch('/api/teachers/assign', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        teacherId: selectedTeacher.id,
+                        classNames: selectedTeacher.classes
+                    })
+                });
+
+                if (res.ok) {
+                    setShowAssignModal(false);
+                    setSelectedTeacher(null);
+                    fetchTeachers();
+                } else {
+                    const err = await res.json();
+                    alert(err.error || 'Failed to assign classes');
+                }
+            } catch (error) {
+                alert('An error occurred while assigning classes');
+            }
         }
     };
 
@@ -249,7 +279,7 @@ export default function TeachersManagement() {
                                         <td className="py-4 px-6">
                                             <div className="flex items-center gap-3">
                                                 <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-400 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
-                                                    {teacher.name.split(' ').map(n => n[0]).join('')}
+                                                    {teacher.name.split(' ').map((n: string) => n[0]).join('')}
                                                 </div>
                                                 <div>
                                                     <p className="font-medium text-slate-900">{teacher.name}</p>
@@ -264,7 +294,7 @@ export default function TeachersManagement() {
                                         </td>
                                         <td className="py-4 px-6">
                                             <div className="flex flex-wrap gap-1">
-                                                {teacher.classes.slice(0, 2).map((cls, idx) => (
+                                                {teacher.classes.slice(0, 2).map((cls: string, idx: number) => (
                                                     <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
                                                         {cls}
                                                     </span>
@@ -278,7 +308,7 @@ export default function TeachersManagement() {
                                         </td>
                                         <td className="py-4 px-6">
                                             <div className="flex flex-wrap gap-1">
-                                                {teacher.courses.slice(0, 2).map((course, idx) => (
+                                                {teacher.courses.slice(0, 2).map((course: string, idx: number) => (
                                                     <span key={idx} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-700">
                                                         {course}
                                                     </span>
@@ -292,10 +322,10 @@ export default function TeachersManagement() {
                                         </td>
                                         <td className="py-4 px-6 text-center">
                                             <button
-                                                onClick={() => handleToggleStatus(teacher.id)}
+                                                onClick={() => handleToggleStatus(teacher.id, teacher.status)}
                                                 className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${teacher.status === 'active'
-                                                        ? 'bg-green-100 text-green-700 hover:bg-green-200'
-                                                        : 'bg-red-100 text-red-700 hover:bg-red-200'
+                                                    ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                                    : 'bg-red-100 text-red-700 hover:bg-red-200'
                                                     }`}
                                             >
                                                 {teacher.status === 'active' ? <UserCheck size={14} /> : <UserX size={14} />}
@@ -428,8 +458,8 @@ export default function TeachersManagement() {
                                             key={cls}
                                             onClick={() => toggleClass(cls)}
                                             className={`px-4 py-2 rounded-lg border-2 font-medium transition-all text-sm ${selectedTeacher.classes.includes(cls)
-                                                    ? 'border-purple-500 bg-purple-50 text-purple-700'
-                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'
+                                                ? 'border-purple-500 bg-purple-50 text-purple-700'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-purple-300'
                                                 }`}
                                         >
                                             {cls}
@@ -447,8 +477,8 @@ export default function TeachersManagement() {
                                             key={course}
                                             onClick={() => toggleCourse(course)}
                                             className={`px-4 py-2 rounded-lg border-2 font-medium transition-all text-sm ${selectedTeacher.courses.includes(course)
-                                                    ? 'border-green-500 bg-green-50 text-green-700'
-                                                    : 'border-slate-200 bg-white text-slate-600 hover:border-green-300'
+                                                ? 'border-green-500 bg-green-50 text-green-700'
+                                                : 'border-slate-200 bg-white text-slate-600 hover:border-green-300'
                                                 }`}
                                         >
                                             {course}
@@ -474,6 +504,68 @@ export default function TeachersManagement() {
                                 Save Assignments
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Credentials Reveal Modal */}
+            {showCredentialsModal && credentials && (
+                <div className="fixed inset-0 bg-black/60 backdrop-blur-md z-[70] flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-8 animate-fadeIn border-t-8 border-blue-600">
+                        <div className="text-center mb-6">
+                            <div className="w-20 h-20 bg-blue-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                <UserCheck className="text-blue-600" size={40} />
+                            </div>
+                            <h3 className="text-2xl font-black text-slate-900">Teacher Created!</h3>
+                            <p className="text-slate-500 font-medium">Please save these credentials to share with the teacher.</p>
+                        </div>
+
+                        <div className="space-y-4 mb-8">
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Login Email</label>
+                                <div className="flex items-center justify-between">
+                                    <p className="font-bold text-slate-900">{credentials.email}</p>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(credentials.email);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 tracking-widest">Auto-Generated Password</label>
+                                <div className="flex items-center justify-between">
+                                    <p className="font-mono font-bold text-blue-600 text-lg tracking-wider">{credentials.password}</p>
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(credentials.password);
+                                            setCopied(true);
+                                            setTimeout(() => setCopied(false), 2000);
+                                        }}
+                                        className="p-2 text-slate-400 hover:text-blue-600 transition-colors"
+                                    >
+                                        <Copy size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => {
+                                setShowCredentialsModal(false);
+                                setCredentials(null);
+                            }}
+                            className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2"
+                        >
+                            {copied ? <Check size={20} className="text-green-400" /> : null}
+                            {copied ? 'Copied to Clipboard' : 'I have saved these'}
+                        </button>
                     </div>
                 </div>
             )}

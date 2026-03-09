@@ -10,6 +10,8 @@ import {
 export default function AdmissionsPage() {
     const [isSubmitted, setIsSubmitted] = useState(false);
     const [isError, setIsError] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
     const [formData, setFormData] = useState({
         // 1. Student Information
         studentName: '',
@@ -60,7 +62,7 @@ export default function AdmissionsPage() {
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
         // Validation: Required fields check
@@ -68,7 +70,7 @@ export default function AdmissionsPage() {
             'studentName', 'dateOfBirth', 'gender', 'placeOfBirth', 'nationality', 'address',
             'guardianName', 'relationship', 'guardianPhone', 'guardianEmail', 'guardianAddress',
             'grade', 'emergencyContactName', 'emergencyRelationship', 'emergencyPhone',
-            'admissionDate', 'studentId', 'paymentStatus'
+            'admissionDate', 'studentId'
         ];
 
         const isFormValid = requiredFields.every(field => {
@@ -77,41 +79,64 @@ export default function AdmissionsPage() {
         });
 
         if (isFormValid) {
-            setIsSubmitted(true);
-            setIsError(false);
-            // Reset form after a delay or show success state
-            setTimeout(() => {
-                setIsSubmitted(false);
-                setFormData({
-                    studentName: '',
-                    dateOfBirth: '',
-                    gender: '',
-                    placeOfBirth: '',
-                    nationality: '',
-                    address: '',
-                    studentPhoto: null,
-                    guardianName: '',
-                    relationship: '',
-                    guardianPhone: '',
-                    guardianEmail: '',
-                    guardianOccupation: '',
-                    guardianAddress: '',
-                    grade: '',
-                    previousSchool: '',
-                    lastClassCompleted: '',
-                    emergencyContactName: '',
-                    emergencyRelationship: '',
-                    emergencyPhone: '',
-                    knownAllergies: '',
-                    medicalConditions: '',
-                    bloodGroup: '',
-                    admissionDate: new Date().toISOString().split('T')[0],
-                    studentId: '',
-                    paymentStatus: 'Pending'
+            try {
+                setIsLoading(true);
+                const res = await fetch('/api/students', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(formData)
                 });
-            }, 3000);
+
+                if (res.ok) {
+                    setIsSubmitted(true);
+                    setIsError(false);
+                    // Reset form after a delay
+                    setTimeout(() => {
+                        setIsSubmitted(false);
+                        setFormData({
+                            studentName: '',
+                            dateOfBirth: '',
+                            gender: '',
+                            placeOfBirth: '',
+                            nationality: '',
+                            address: '',
+                            studentPhoto: null,
+                            guardianName: '',
+                            relationship: '',
+                            guardianPhone: '',
+                            guardianEmail: '',
+                            guardianOccupation: '',
+                            guardianAddress: '',
+                            grade: '',
+                            previousSchool: '',
+                            lastClassCompleted: '',
+                            emergencyContactName: '',
+                            emergencyRelationship: '',
+                            emergencyPhone: '',
+                            knownAllergies: '',
+                            medicalConditions: '',
+                            bloodGroup: '',
+                            admissionDate: new Date().toISOString().split('T')[0],
+                            studentId: '',
+                            paymentStatus: 'Pending'
+                        });
+                    }, 3000);
+                } else {
+                    const err = await res.json();
+                    setIsError(true);
+                    setErrorMessage(err.error || 'Failed to admit student');
+                    setTimeout(() => setIsError(false), 3000);
+                }
+            } catch (error) {
+                setIsError(true);
+                setErrorMessage('An error occurred during submission');
+                setTimeout(() => setIsError(false), 3000);
+            } finally {
+                setIsLoading(false);
+            }
         } else {
             setIsError(true);
+            setErrorMessage('Please fill in all required fields');
             setTimeout(() => setIsError(false), 3000);
         }
     };
@@ -579,7 +604,7 @@ export default function AdmissionsPage() {
                         <CheckCircle2 size={24} className="text-green-600" />
                         <div>
                             <p className="font-bold">Admission Successful!</p>
-                            <p className="text-sm">The student has been successfully registered in the school system.</p>
+                            <p className="text-sm">The student has been successfully registered. The index number is their temporary login ID.</p>
                         </div>
                     </div>
                 )}
@@ -588,8 +613,8 @@ export default function AdmissionsPage() {
                     <div className="p-4 bg-red-50 border border-red-200 rounded-xl flex items-center gap-3 text-red-800 animate-fadeIn">
                         <AlertCircle size={24} className="text-red-600" />
                         <div>
-                            <p className="font-bold">Missing Information</p>
-                            <p className="text-sm">Please fill in all required fields before submitting.</p>
+                            <p className="font-bold">Submission Failed</p>
+                            <p className="text-sm">{errorMessage || 'Please fill in all required fields before submitting.'}</p>
                         </div>
                     </div>
                 )}
@@ -631,10 +656,11 @@ export default function AdmissionsPage() {
                     </button>
                     <button
                         type="submit"
-                        className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl active:scale-95 group"
+                        disabled={isLoading}
+                        className={`flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl active:scale-95 group ${isLoading ? 'opacity-70 cursor-not-allowed' : ''}`}
                     >
-                        Admit Student
-                        <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                        {isLoading ? 'Admitting...' : 'Admit Student'}
+                        {!isLoading && <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />}
                     </button>
                 </div>
             </form>
