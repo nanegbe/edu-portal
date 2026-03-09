@@ -3,14 +3,31 @@
 import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Plus, Edit, Trash2, Clock, AlertCircle, CheckCircle2, XCircle } from 'lucide-react';
 
+interface Semester {
+    id: string;
+    name: string;
+    startDate: string;
+    endDate: string;
+    isActive: boolean;
+    status: 'upcoming' | 'active' | 'completed';
+}
+
+interface AcademicYear {
+    id: string;
+    year: string;
+    type: 'semester' | 'trimester';
+    status: 'upcoming' | 'active' | 'completed';
+    semesters: Semester[];
+}
+
 export default function AcademicCalendar() {
     const [showAddYearModal, setShowAddYearModal] = useState(false);
     const [showEditSemesterModal, setShowEditSemesterModal] = useState(false);
-    const [selectedSemester, setSelectedSemester] = useState<any>(null);
+    const [selectedSemester, setSelectedSemester] = useState<Semester | null>(null);
     const [loading, setLoading] = useState(true);
 
     // Dynamic data
-    const [academicYears, setAcademicYears] = useState<any[]>([]);
+    const [academicYears, setAcademicYears] = useState<AcademicYear[]>([]);
 
     useEffect(() => {
         fetchCalendar();

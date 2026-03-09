@@ -1,137 +1,114 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, Users, Award, ChevronRight, Calendar, TrendingUp, Star, FileText, ClipboardList } from 'lucide-react';
 
+interface Score {
+    assessment: string;
+    type: 'quiz' | 'exam';
+    score: number;
+    date: string;
+}
+
+interface AttendanceRecord {
+    date: string;
+    status: string;
+    participation: number;
+}
+
+interface Student {
+    id: string;
+    name: string;
+    class: string;
+    attendance: number;
+    participation: number;
+    avgScore: number;
+    attendanceHistory: AttendanceRecord[];
+    scores: Score[];
+}
+
+interface TeacherStats {
+    totalStudents: number;
+    avgAttendance: number;
+    participationRate: number;
+    avgScores: number;
+    activeSemester: string;
+}
+
+interface TeacherInfo {
+    name: string;
+    email: string;
+    subject: string;
+    classes: string[];
+}
+
+interface DashboardData {
+    teacher: TeacherInfo;
+    stats: TeacherStats;
+    students: Student[];
+}
+
 export default function TeacherDashboard() {
-    const [selectedStudent, setSelectedStudent] = useState<any>(null);
+    const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
 
-    // Mock data
-    const teacherInfo = {
-        name: 'Sarah Johnson',
-        email: 'sarah.j@school.edu',
-        subject: 'Mathematics',
-        classes: ['Grade 10A', 'Grade 11A']
-    };
+    useEffect(() => {
+        async function fetchDashboardData() {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/teacher/stats');
+                if (!response.ok) throw new Error('Failed to fetch dashboard data');
+                const data = await response.json();
+                setDashboardData(data);
+            } catch (err: any) {
+                setError(err.message);
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchDashboardData();
+    }, []);
 
-    const semesterStats = {
-        avgAttendance: 92.5,
-        participationRate: 88.3,
-        avgScores: 84.7,
-        totalStudents: 58,
-        activeSemester: 'Fall 2025'
-    };
-
-    const students = [
-        {
-            id: 1,
-            name: 'Emma Johnson',
-            class: 'Grade 10A',
-            attendance: 98.5,
-            participation: 95.0,
-            avgScore: 92.3,
-            attendanceHistory: [
-                { date: '2025-11-01', status: 'present', participation: 5 },
-                { date: '2025-11-02', status: 'present', participation: 4 },
-                { date: '2025-11-03', status: 'present', participation: 5 },
-                { date: '2025-11-04', status: 'present', participation: 3 },
-                { date: '2025-11-05', status: 'present', participation: 5 },
-            ],
-            scores: [
-                { assessment: 'Quiz 1', type: 'quiz', score: 95, date: '2025-10-15' },
-                { assessment: 'Midterm Exam', type: 'exam', score: 88, date: '2025-10-30' },
-                { assessment: 'Quiz 2', type: 'quiz', score: 92, date: '2025-11-05' },
-            ]
-        },
-        {
-            id: 2,
-            name: 'Liam Chen',
-            class: 'Grade 10A',
-            attendance: 96.2,
-            participation: 91.5,
-            avgScore: 89.7,
-            attendanceHistory: [
-                { date: '2025-11-01', status: 'present', participation: 4 },
-                { date: '2025-11-02', status: 'present', participation: 5 },
-                { date: '2025-11-03', status: 'absent', participation: 0 },
-                { date: '2025-11-04', status: 'present', participation: 4 },
-                { date: '2025-11-05', status: 'present', participation: 5 },
-            ],
-            scores: [
-                { assessment: 'Quiz 1', type: 'quiz', score: 90, date: '2025-10-15' },
-                { assessment: 'Midterm Exam', type: 'exam', score: 92, date: '2025-10-30' },
-                { assessment: 'Quiz 2', type: 'quiz', score: 87, date: '2025-11-05' },
-            ]
-        },
-        {
-            id: 3,
-            name: 'Sophia Martinez',
-            class: 'Grade 11A',
-            attendance: 94.8,
-            participation: 88.3,
-            avgScore: 87.2,
-            attendanceHistory: [
-                { date: '2025-11-01', status: 'present', participation: 4 },
-                { date: '2025-11-02', status: 'present', participation: 3 },
-                { date: '2025-11-03', status: 'present', participation: 5 },
-                { date: '2025-11-04', status: 'late', participation: 3 },
-                { date: '2025-11-05', status: 'present', participation: 4 },
-            ],
-            scores: [
-                { assessment: 'Quiz 1', type: 'quiz', score: 85, date: '2025-11-15' },
-                { assessment: 'Midterm Exam', type: 'exam', score: 90, date: '2025-10-30' },
-                { assessment: 'Quiz 2', type: 'quiz', score: 86, date: '2025-11-05' },
-            ]
-        },
-        {
-            id: 4,
-            name: 'Noah Williams',
-            class: 'Grade 10A',
-            attendance: 92.5,
-            participation: 85.7,
-            avgScore: 84.5,
-            attendanceHistory: [
-                { date: '2025-11-01', status: 'present', participation: 3 },
-                { date: '2025-11-02', status: 'absent', participation: 0 },
-                { date: '2025-11-03', status: 'present', participation: 4 },
-                { date: '2025-11-04', status: 'present', participation: 5 },
-                { date: '2025-11-05', status: 'present', participation: 3 },
-            ],
-            scores: [
-                { assessment: 'Quiz 1', type: 'quiz', score: 82, date: '2025-10-15' },
-                { assessment: 'Midterm Exam', type: 'exam', score: 85, date: '2025-10-30' },
-                { assessment: 'Quiz 2', type: 'quiz', score: 86, date: '2025-11-05' },
-            ]
-        },
-        {
-            id: 5,
-            name: 'Olivia Brown',
-            class: 'Grade 11A',
-            attendance: 91.3,
-            participation: 83.2,
-            avgScore: 82.8,
-            attendanceHistory: [
-                { date: '2025-11-01', status: 'present', participation: 3 },
-                { date: '2025-11-02', status: 'present', participation: 4 },
-                { date: '2025-11-03', status: 'late', participation: 2 },
-                { date: '2025-11-04', status: 'present', participation: 4 },
-                { date: '2025-11-05', status: 'absent', participation: 0 },
-            ],
-            scores: [
-                { assessment: 'Quiz 1', type: 'quiz', score: 80, date: '2025-10-15' },
-                { assessment: 'Midterm Exam', type: 'exam', score: 83, date: '2025-10-30' },
-                { assessment: 'Quiz 2', type: 'quiz', score: 85, date: '2025-11-05' },
-            ]
-        },
-    ];
-
-    const handleStudentClick = (student: any) => {
+    const handleStudentClick = (student: Student) => {
         setSelectedStudent(student);
     };
 
     const handleBackToStudents = () => {
         setSelectedStudent(null);
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-bold animate-pulse">Loading Dashboard Data...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !dashboardData) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="bg-red-50 p-8 rounded-[2rem] border-2 border-red-100 text-center max-w-md">
+                    <h3 className="text-xl font-black text-red-900 mb-2">Sync Error</h3>
+                    <p className="text-red-600 font-medium mb-6">{error || 'Data could not be synchronized'}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-3 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+                    >
+                        Retry Connection
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const { teacher, stats, students } = dashboardData;
 
     const formatDate = (dateString: string) => {
         return new Date(dateString).toLocaleDateString('en-US', {
@@ -233,7 +210,7 @@ export default function TeacherDashboard() {
                             </div>
                             <div className="p-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                    {selectedStudent.scores.map((score: any, index: number) => (
+                                    {selectedStudent.scores.map((score: Score, index: number) => (
                                         <div key={index} className="group relative bg-slate-50/50 border-2 border-slate-100 rounded-[1.5rem] p-6 hover:border-blue-200 hover:bg-white transition-all hover:shadow-lg">
                                             <div className="flex items-center justify-between mb-4">
                                                 <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest shadow-sm ring-1 ${score.type === 'quiz' ? 'bg-blue-100 text-blue-700 ring-blue-200' : 'bg-indigo-100 text-indigo-700 ring-indigo-200'}`}>
@@ -275,7 +252,7 @@ export default function TeacherDashboard() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {selectedStudent.attendanceHistory.map((record: any, index: number) => (
+                                            {selectedStudent.attendanceHistory.map((record: AttendanceRecord, index: number) => (
                                                 <tr key={index} className="border-b border-slate-50 hover:bg-blue-50/50 transition-colors group">
                                                     <td className="py-5 px-6 font-bold text-slate-700">{formatDate(record.date)}</td>
                                                     <td className="py-5 px-6 text-center">
@@ -308,10 +285,10 @@ export default function TeacherDashboard() {
                         {/* Summary Stats */}
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                             {[
-                                { label: 'Total Students', val: semesterStats.totalStudents.toLocaleString(), icon: Users, from: 'from-blue-400', to: 'to-blue-600', trend: null },
-                                { label: 'Avg Attendance', val: `${semesterStats.avgAttendance}%`, icon: Calendar, from: 'from-green-400', to: 'to-emerald-600', trend: '+2.1%' },
-                                { label: 'Participation', val: `${semesterStats.participationRate}%`, icon: TrendingUp, from: 'from-cyan-400', to: 'to-blue-600', trend: '+1.5%' },
-                                { label: 'Avg Scores', val: `${semesterStats.avgScores}%`, icon: BookOpen, from: 'from-purple-400', to: 'to-indigo-600', trend: '+0.8%' }
+                                { label: 'Total Students', val: stats.totalStudents.toLocaleString(), icon: Users, from: 'from-blue-400', to: 'to-blue-600', trend: null },
+                                { label: 'Avg Attendance', val: `${stats.avgAttendance}%`, icon: Calendar, from: 'from-green-400', to: 'to-emerald-600', trend: '+2.1%' },
+                                { label: 'Participation', val: `${stats.participationRate}%`, icon: TrendingUp, from: 'from-cyan-400', to: 'to-blue-600', trend: '+1.5%' },
+                                { label: 'Avg Scores', val: `${stats.avgScores}%`, icon: BookOpen, from: 'from-purple-400', to: 'to-indigo-600', trend: '+0.8%' }
 
                             ].map((stat, i) => (
                                 <div key={i} className="bg-white rounded-2xl shadow-lg p-6 border border-slate-200 hover:shadow-xl transition-shadow">
@@ -342,7 +319,7 @@ export default function TeacherDashboard() {
                                     <p className="text-slate-500 font-bold text-sm">Top performing students across your classes</p>
                                 </div>
                                 <span className="hidden sm:block text-[10px] font-black text-blue-600 bg-blue-50 px-4 py-2 rounded-full border border-blue-100 uppercase tracking-widest">
-                                    {semesterStats.activeSemester}
+                                    {stats.activeSemester}
                                 </span>
                             </div>
                             <div className="overflow-x-auto min-h-[400px]">
@@ -358,7 +335,7 @@ export default function TeacherDashboard() {
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-50">
-                                        {students.map((student, index) => (
+                                        {students.map((student: Student, index: number) => (
                                             <tr
                                                 key={student.id}
                                                 onClick={() => handleStudentClick(student)}

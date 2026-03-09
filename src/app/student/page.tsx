@@ -1,91 +1,52 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookOpen, ChevronRight, File, Video, Link as LinkIcon, Download, Eye, User } from 'lucide-react';
 
-export default function StudentDashboard() {
-    const [selectedCourse, setSelectedCourse] = useState<any>(null);
+interface Material {
+    id: string;
+    type: 'pdf' | 'video' | 'link';
+    name: string;
+    size?: string;
+    duration?: string;
+    uploadDate: string;
+}
 
-    const courses = [
-        {
-            id: 1,
-            title: 'Mathematics',
-            subtitle: 'Algebra II',
-            teacher: 'Sarah Johnson',
-            color: 'from-blue-400 to-cyan-500',
-            icon: '📐',
-            materials: [
-                { id: 1, name: 'Chapter 5: Quadratic Functions', type: 'pdf', size: '2.4 MB', uploadDate: '2025-11-01' },
-                { id: 2, name: 'Factoring Techniques Tutorial', type: 'video', duration: '15:30', uploadDate: '2025-10-28' },
-                { id: 3, name: 'Khan Academy - Quadratics', type: 'link', url: 'https://khanacademy.org', uploadDate: '2025-10-25' },
-                { id: 4, name: 'Homework Assignment 12', type: 'pdf', size: '0.8 MB', uploadDate: '2025-10-20' },
-            ]
-        },
-        {
-            id: 2,
-            title: 'Physics',
-            subtitle: 'Mechanics & Waves',
-            teacher: 'Michael Chen',
-            color: 'from-purple-400 to-pink-500',
-            icon: '⚡',
-            materials: [
-                { id: 5, name: 'Newton\'s Laws of Motion', type: 'pdf', size: '3.1 MB', uploadDate: '2025-11-03' },
-                { id: 6, name: 'Force and Acceleration Demo', type: 'video', duration: '12:45', uploadDate: '2025-11-01' },
-                { id: 7, name: 'PhET Simulations', type: 'link', url: 'https://phet.colorado.edu', uploadDate: '2025-10-29' },
-            ]
-        },
-        {
-            id: 3,
-            title: 'English Literature',
-            subtitle: 'American Classics',
-            teacher: 'Emily Rodriguez',
-            color: 'from-green-400 to-emerald-500',
-            icon: '📚',
-            materials: [
-                { id: 8, name: 'To Kill a Mockingbird - Study Guide', type: 'pdf', size: '1.8 MB', uploadDate: '2025-11-02' },
-                { id: 9, name: 'Character Analysis Workshop', type: 'video', duration: '22:15', uploadDate: '2025-10-30' },
-                { id: 10, name: 'Themes and Symbolism Notes', type: 'pdf', size: '1.2 MB', uploadDate: '2025-10-28' },
-            ]
-        },
-        {
-            id: 4,
-            title: 'Chemistry',
-            subtitle: 'Organic Chemistry',
-            teacher: 'David Thompson',
-            color: 'from-orange-400 to-red-500',
-            icon: '🧪',
-            materials: [
-                { id: 11, name: 'Molecular Structures Guide', type: 'pdf', size: '2.7 MB', uploadDate: '2025-11-04' },
-                { id: 12, name: 'Bonding Types Explained', type: 'video', duration: '18:20', uploadDate: '2025-11-02' },
-            ]
-        },
-        {
-            id: 5,
-            title: 'History',
-            subtitle: 'World History',
-            teacher: 'Lisa Anderson',
-            color: 'from-amber-400 to-yellow-500',
-            icon: '🌍',
-            materials: [
-                { id: 13, name: 'World War II Timeline', type: 'pdf', size: '4.2 MB', uploadDate: '2025-11-03' },
-                { id: 14, name: 'Documentary: The War Years', type: 'video', duration: '45:00', uploadDate: '2025-11-01' },
-                { id: 15, name: 'BBC History Resources', type: 'link', url: 'https://bbc.co.uk/history', uploadDate: '2025-10-27' },
-            ]
-        },
-        {
-            id: 6,
-            title: 'Biology',
-            subtitle: 'Cell Biology',
-            teacher: 'Robert Williams',
-            color: 'from-teal-400 to-cyan-500',
-            icon: '🔬',
-            materials: [
-                { id: 16, name: 'Cell Structure and Function', type: 'pdf', size: '3.5 MB', uploadDate: '2025-11-04' },
-                { id: 17, name: 'Mitosis vs Meiosis', type: 'video', duration: '16:30', uploadDate: '2025-11-02' },
-                { id: 18, name: 'Interactive Cell Diagram', type: 'link', url: 'https://cellsalive.com', uploadDate: '2025-10-30' },
-            ]
-        },
-    ];
+interface Course {
+    id: string;
+    color: string;
+    icon: React.ReactNode;
+    title: string;
+    subtitle: string;
+    teacher: string;
+    attendance: number;
+    materials: Material[];
+}
+
+export default function StudentDashboard() {
+    const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [dashboardData, setDashboardData] = useState<{ courses: Course[] } | null>(null);
+
+
+    useEffect(() => {
+        async function fetchDashboardData() {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/student/stats');
+                if (!response.ok) throw new Error('Failed to fetch dashboard data');
+                const data = await response.json();
+                setDashboardData(data);
+            } catch (err: any) {
+                setError(err.message);
+                console.error(err);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        fetchDashboardData();
+    }, []);
 
     const getResourceIcon = (type: string) => {
         switch (type) {
@@ -112,6 +73,36 @@ export default function StudentDashboard() {
             year: 'numeric'
         });
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="text-slate-500 font-bold animate-pulse">Loading Your Courses...</p>
+                </div>
+            </div>
+        );
+    }
+
+    if (error || !dashboardData) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="bg-red-50 p-8 rounded-[2rem] border-2 border-red-100 text-center max-w-md">
+                    <h3 className="text-xl font-black text-red-900 mb-2">Sync Error</h3>
+                    <p className="text-red-600 font-medium mb-6">{error || 'Your academic data could not be synchronized'}</p>
+                    <button
+                        onClick={() => window.location.reload()}
+                        className="px-6 py-3 bg-red-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-red-700 transition-all active:scale-95"
+                    >
+                        Retry Connection
+                    </button>
+                </div>
+            </div>
+        );
+    }
+
+    const { courses } = dashboardData;
 
     return (
         <div className="max-w-7xl mx-auto">
@@ -150,7 +141,7 @@ export default function StudentDashboard() {
                                     <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Total Resources</p>
                                 </div>
                                 <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 text-center">
-                                    <p className="text-3xl font-black mb-1">92%</p>
+                                    <p className="text-3xl font-black mb-1">{selectedCourse.attendance}%</p>
                                     <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Attendance</p>
                                 </div>
                             </div>
@@ -177,7 +168,8 @@ export default function StudentDashboard() {
                         <div className="p-8">
                             {selectedCourse.materials.length > 0 ? (
                                 <div className="grid grid-cols-1 gap-4">
-                                    {selectedCourse.materials.map((material: any) => (
+                                    {selectedCourse.materials.map((material: Material) => (
+
                                         <div key={material.id} className="group relative bg-slate-50/50 border-2 border-slate-100 rounded-3xl p-6 hover:border-indigo-200 hover:bg-white hover:shadow-lg transition-all duration-300">
                                             <div className="flex flex-col sm:flex-row sm:items-center gap-6">
                                                 <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-sm group-hover:scale-110 transition-transform flex-shrink-0 border border-slate-100">
@@ -248,7 +240,8 @@ export default function StudentDashboard() {
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                        {courses.map((course) => (
+                        {courses.map((course: Course) => (
+
                             <button
                                 key={course.id}
                                 onClick={() => setSelectedCourse(course)}
