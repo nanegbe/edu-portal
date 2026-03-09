@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Menu, X, LogOut, BookOpen, Users, TrendingUp, ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { Menu, X, LogOut, BookOpen, Users, TrendingUp, ChevronLeft, ChevronRight, Calendar, UserPlus } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
@@ -16,6 +16,7 @@ export default function DashboardLayout({
 
     const navItems = [
         { name: 'Dashboard', href: '/dashboard', icon: BookOpen },
+        { name: 'Admissions', href: '/dashboard/admissions', icon: UserPlus },
         { name: 'Teachers', href: '/dashboard/teachers', icon: Users },
         { name: 'Calendar', href: '/dashboard/calendar', icon: Calendar },
         { name: 'Reports', href: '/dashboard/reports', icon: TrendingUp, disabled: true },
