@@ -13,6 +13,7 @@ export default function AcademicCalendar() {
         {
             id: 1,
             year: '2024/2025',
+            type: 'semester',
             status: 'completed',
             semesters: [
                 {
@@ -36,6 +37,7 @@ export default function AcademicCalendar() {
         {
             id: 2,
             year: '2025/2026',
+            type: 'semester',
             status: 'active',
             semesters: [
                 {
@@ -59,6 +61,7 @@ export default function AcademicCalendar() {
         {
             id: 3,
             year: '2026/2027',
+            type: 'semester',
             status: 'upcoming',
             semesters: [
                 {
@@ -83,10 +86,13 @@ export default function AcademicCalendar() {
 
     const [newYear, setNewYear] = useState({
         year: '',
-        fallStart: '',
-        fallEnd: '',
-        springStart: '',
-        springEnd: ''
+        type: 'semester' as 'semester' | 'trimester',
+        term1Start: '',
+        term1End: '',
+        term2Start: '',
+        term2End: '',
+        term3Start: '',
+        term3End: ''
     });
 
     const getActiveSemester = () => {
@@ -101,32 +107,58 @@ export default function AcademicCalendar() {
     };
 
     const handleAddAcademicYear = () => {
-        if (newYear.year && newYear.fallStart && newYear.fallEnd && newYear.springStart && newYear.springEnd) {
-            const year = {
+        const { year, type, term1Start, term1End, term2Start, term2End, term3Start, term3End } = newYear;
+
+        const isSemesterValid = type === 'semester' && year && term1Start && term1End && term2Start && term2End;
+        const isTrimesterValid = type === 'trimester' && year && term1Start && term1End && term2Start && term2End && term3Start && term3End;
+
+        if (isSemesterValid || isTrimesterValid) {
+            const semesters = [
+                {
+                    id: Date.now(),
+                    name: type === 'semester' ? 'First Semester' : 'First Term',
+                    startDate: term1Start,
+                    endDate: term1End,
+                    status: 'upcoming',
+                    isActive: false
+                },
+                {
+                    id: Date.now() + 1,
+                    name: type === 'semester' ? 'Second Semester' : 'Second Term',
+                    startDate: term2Start,
+                    endDate: term2End,
+                    status: 'upcoming',
+                    isActive: false
+                }
+            ];
+
+            if (type === 'trimester') {
+                semesters.push({
+                    id: Date.now() + 2,
+                    name: 'Third Term',
+                    startDate: term3Start,
+                    endDate: term3End,
+                    status: 'upcoming',
+                    isActive: false
+                });
+            }
+
+            const academicYear = {
                 id: academicYears.length + 1,
-                year: newYear.year,
+                year: year,
+                type: type,
                 status: 'upcoming',
-                semesters: [
-                    {
-                        id: Date.now(),
-                        name: `Fall ${newYear.year.split('/')[0]}`,
-                        startDate: newYear.fallStart,
-                        endDate: newYear.fallEnd,
-                        status: 'upcoming',
-                        isActive: false
-                    },
-                    {
-                        id: Date.now() + 1,
-                        name: `Spring ${newYear.year.split('/')[1]}`,
-                        startDate: newYear.springStart,
-                        endDate: newYear.springEnd,
-                        status: 'upcoming',
-                        isActive: false
-                    }
-                ]
+                semesters: semesters
             };
-            setAcademicYears([...academicYears, year]);
-            setNewYear({ year: '', fallStart: '', fallEnd: '', springStart: '', springEnd: '' });
+
+            setAcademicYears([...academicYears, academicYear]);
+            setNewYear({
+                year: '',
+                type: 'semester',
+                term1Start: '', term1End: '',
+                term2Start: '', term2End: '',
+                term3Start: '', term3End: ''
+            });
             setShowAddYearModal(false);
         }
     };
@@ -288,7 +320,7 @@ export default function AcademicCalendar() {
 
                             {/* Semesters */}
                             <div className="p-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className={`grid grid-cols-1 gap-6 ${year.semesters.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
                                     {year.semesters.map((semester) => {
                                         const status = getSemesterStatus(semester.startDate, semester.endDate);
                                         return (
@@ -403,30 +435,49 @@ export default function AcademicCalendar() {
                             <p className="text-slate-500 font-medium">Define the timeframe for the upcoming year</p>
                         </div>
                         <div className="p-8 space-y-8">
-                            <div>
-                                <label className="block text-xs font-extrabold text-slate-500 uppercase mb-3 tracking-widest">Year Identification</label>
-                                <input
-                                    type="text"
-                                    value={newYear.year}
-                                    onChange={(e) => setNewYear({ ...newYear, year: e.target.value })}
-                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold"
-                                    placeholder="e.g. 2027/2028"
-                                />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase mb-3 tracking-widest">Year Identification</label>
+                                    <input
+                                        type="text"
+                                        value={newYear.year}
+                                        onChange={(e) => setNewYear({ ...newYear, year: e.target.value })}
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 transition-all font-bold"
+                                        placeholder="e.g. 2027/2028"
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-xs font-extrabold text-slate-500 uppercase mb-3 tracking-widest">System Type</label>
+                                    <div className="flex p-1 bg-slate-100 rounded-2xl border border-slate-200">
+                                        <button
+                                            onClick={() => setNewYear({ ...newYear, type: 'semester' })}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${newYear.type === 'semester' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            Semester
+                                        </button>
+                                        <button
+                                            onClick={() => setNewYear({ ...newYear, type: 'trimester' })}
+                                            className={`flex-1 py-3 rounded-xl font-bold text-sm transition-all ${newYear.type === 'trimester' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                        >
+                                            Trimester
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                 <div className="space-y-4">
                                     <h4 className="font-black text-slate-900 flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 text-sm">F</span>
-                                        Fall Semester
+                                        <span className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 text-sm">1</span>
+                                        {newYear.type === 'semester' ? 'First Semester' : 'First Term'}
                                     </h4>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div>
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Start Date</label>
                                             <input
                                                 type="date"
-                                                value={newYear.fallStart}
-                                                onChange={(e) => setNewYear({ ...newYear, fallStart: e.target.value })}
+                                                value={newYear.term1Start}
+                                                onChange={(e) => setNewYear({ ...newYear, term1Start: e.target.value })}
                                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
                                             />
                                         </div>
@@ -434,8 +485,8 @@ export default function AcademicCalendar() {
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">End Date</label>
                                             <input
                                                 type="date"
-                                                value={newYear.fallEnd}
-                                                onChange={(e) => setNewYear({ ...newYear, fallEnd: e.target.value })}
+                                                value={newYear.term1End}
+                                                onChange={(e) => setNewYear({ ...newYear, term1End: e.target.value })}
                                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
                                             />
                                         </div>
@@ -444,16 +495,16 @@ export default function AcademicCalendar() {
 
                                 <div className="space-y-4">
                                     <h4 className="font-black text-slate-900 flex items-center gap-2">
-                                        <span className="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-green-600 text-sm">S</span>
-                                        Spring Semester
+                                        <span className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 text-sm">2</span>
+                                        {newYear.type === 'semester' ? 'Second Semester' : 'Second Term'}
                                     </h4>
-                                    <div className="space-y-4">
+                                    <div className="space-y-3">
                                         <div>
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Start Date</label>
                                             <input
                                                 type="date"
-                                                value={newYear.springStart}
-                                                onChange={(e) => setNewYear({ ...newYear, springStart: e.target.value })}
+                                                value={newYear.term2Start}
+                                                onChange={(e) => setNewYear({ ...newYear, term2Start: e.target.value })}
                                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
                                             />
                                         </div>
@@ -461,20 +512,55 @@ export default function AcademicCalendar() {
                                             <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">End Date</label>
                                             <input
                                                 type="date"
-                                                value={newYear.springEnd}
-                                                onChange={(e) => setNewYear({ ...newYear, springEnd: e.target.value })}
+                                                value={newYear.term2End}
+                                                onChange={(e) => setNewYear({ ...newYear, term2End: e.target.value })}
                                                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
                                             />
                                         </div>
                                     </div>
                                 </div>
+
+                                {newYear.type === 'trimester' && (
+                                    <div className="space-y-4 animate-fadeIn">
+                                        <h4 className="font-black text-slate-900 flex items-center gap-2">
+                                            <span className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 text-sm">3</span>
+                                            Third Term
+                                        </h4>
+                                        <div className="space-y-3">
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Start Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={newYear.term3Start}
+                                                    onChange={(e) => setNewYear({ ...newYear, term3Start: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">End Date</label>
+                                                <input
+                                                    type="date"
+                                                    value={newYear.term3End}
+                                                    onChange={(e) => setNewYear({ ...newYear, term3End: e.target.value })}
+                                                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500/20"
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <div className="p-8 bg-slate-50/50 flex gap-4">
                             <button
                                 onClick={() => {
                                     setShowAddYearModal(false);
-                                    setNewYear({ year: '', fallStart: '', fallEnd: '', springStart: '', springEnd: '' });
+                                    setNewYear({
+                                        year: '',
+                                        type: 'semester',
+                                        term1Start: '', term1End: '',
+                                        term2Start: '', term2End: '',
+                                        term3Start: '', term3End: ''
+                                    });
                                 }}
                                 className="flex-1 px-6 py-4 border-2 border-slate-200 text-slate-600 rounded-2xl font-bold hover:bg-white transition-all shadow-sm"
                             >
